@@ -2,9 +2,16 @@
 
 # better-red-broker
 
+[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
+![Workflow status](https://github.com/bruttazz/better-red-broker/actions/workflows/release.yml/badge.svg)
+[![Release](https://img.shields.io/github/release/bruttazz/better-red-broker.svg?style=flat-square)](https://github.com/bruttazz/better-red-broker/releases/latest)
+
+
 > ⚠️ Vibe Coded
 
 The small relay behind [Better Red](https://github.com/bRuttaZz/better-red)'s partner sharing.
+
+Open deployment: [better-red.brutt.site](https://better-red.brutt.site)
 
 Better Red is a private period tracker. Partner sharing lets her partner see (never change) what
 she chooses to share. This server passes that data between the two phones **without being able to
