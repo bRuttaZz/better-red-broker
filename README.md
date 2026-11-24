@@ -1,3 +1,5 @@
+<img src="./web/static/favicon.svg" align="right" width="100px">
+
 # better-red-broker
 
 > ⚠️ Vibe Coded
