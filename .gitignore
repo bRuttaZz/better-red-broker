@@ -1,0 +1,14 @@
+# Runtime data: the database and the server signing key. NEVER commit these.
+/data/
+*.db
+*.db-wal
+*.db-shm
+*.key
+
+# Build output
+/better-red-broker
+/dist/
+
+# OS / editor junk
+.DS_Store
+*.swp

@@ -1,0 +1,13 @@
+# Never put runtime data (database, signing key) or local builds into an image.
+data/
+*.db
+*.db-wal
+*.db-shm
+*.key
+better-red-broker
+dist/
+.git/
+.github/
+docs/
+*.md
+!README.md
