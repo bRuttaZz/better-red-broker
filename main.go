@@ -64,6 +64,9 @@ func main() {
 
 	go func() {
 		log.Printf("better-red-broker %s listening on %s (max %d days, stale after %d days)", version, cfg.Addr, cfg.MaxDays, cfg.StaleDays)
+		if cfg.Password != "" {
+			log.Print("API password on: clients must send it (X-Better-Red-Password)")
+		}
 		if !cfg.RateLimit {
 			log.Print("rate limits OFF: the reverse proxy must limit requests")
 		} else {

@@ -10,6 +10,8 @@ Every setting is a flag or an environment variable (the flag wins).
 | `-db` | `BR_DB` | `data/broker.db` | SQLite file (its folder is created, mode 0700) |
 | `-key-file` | `BR_KEY_FILE` | `data/server.key` | server signing key; created (0600) if missing |
 | — | `BR_SERVER_KEY` | | the key as hex, instead of the file |
+| — | `BR_PASSWORD` | | optional API password: only phones that send it may use the broker (see below) |
+| `-password-file` | `BR_PASSWORD_FILE` | | the password from a file instead (e.g. a container secret) |
 | `-max-days` | `BR_MAX_DAYS` | `60` | days kept per pair (1–366) |
 | `-stale-days` | `BR_STALE_DAYS` | `10` | delete pairs not written for this long |
 | `-cleanup-every` | `BR_CLEANUP_EVERY` | `1h` | clean-up job interval (≥ 1m) |
@@ -53,6 +55,7 @@ podman run -d --name better-red-broker --restart unless-stopped \
   private address). So **publish the port only on `127.0.0.1`** (as above) or not at all (proxy on
   the same container network), never on a public interface: see "Behind a reverse proxy".
 - Instead of the key file you can pass `BR_SERVER_KEY` from a secret.
+- Private broker: add `-e BR_PASSWORD=…` (or mount a secret and set `BR_PASSWORD_FILE`).
 - Health: `GET /healthz` (there's no shell in the image, so check it from outside, e.g. from
   the proxy or the orchestrator's HTTP probe).
 - Stopping (`podman stop`, SIGTERM) finishes running requests first.
@@ -73,6 +76,29 @@ volumes:
 
 Build it yourself: `podman build -t better-red-broker --build-arg VERSION=$(cat VERSION) .`
 (Docker: `docker build -f Containerfile ...`).
+
+## A private broker (optional password)
+
+By default a broker is open: any Better Red phone can pair through it (the data is end-to-end
+encrypted either way). To keep a self-hosted broker to yourself and people you choose, give it a
+password:
+
+```bash
+BR_PASSWORD='a-long-random-password' better-red-broker      # or: -password-file /run/secrets/br_password
+```
+
+- 1–128 printable ASCII characters, no spaces. Make it long and random (`openssl rand -base64 24`).
+  It's never a flag (command lines are visible to other users of the machine).
+- In the app, her phone types the server as **`password@your.domain`** (Partner → Change). The
+  password goes into the pairing code, so the partner's phone gets it by scanning; nobody types it
+  twice. The app never shows it on screen.
+- Every API call then needs the `X-Better-Red-Password` header; without it: 401. The website,
+  `/healthz` and `/v1/info` (which says `"password": true`) stay public. Wrong passwords count as
+  failed authentication (10 per minute per IP, then 429).
+- **Changing the password** cuts off every paired phone: she has to make a new pairing code with
+  `newpassword@your.domain`, and the partner scans it. Removing it makes the broker open again
+  (old phones keep working: an open broker ignores the header).
+- It's an access gate, not encryption: what's stored was already unreadable to the server.
 
 ## Deploying (systemd example)
 

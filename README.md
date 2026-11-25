@@ -23,6 +23,8 @@ code shown on her screen.
 - Go, one binary, one SQLite file. One dependency: `modernc.org/sqlite` (pure Go, no cgo).
 - Stores at most 60 days per pair; pairs unused for 10 days are deleted. Both configurable.
 - No accounts, no emails, no IP addresses or pair ids in the logs.
+- Self-hosting privately? Set `BR_PASSWORD` and only phones that know it can use your broker (in
+  the app: `password@your.domain` as the server). Optional; without it the broker is open.
 - Serves a small landing page at `/` (logo, download button, version, credits; the app's light theme).
 
 ## Run it

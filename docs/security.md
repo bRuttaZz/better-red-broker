@@ -58,6 +58,11 @@ write to *her* pairs, and is never stored.
 **Guessing codes**: 8 digits, 5 valid at a time → 1 in 20 million per guess; 10 failed attempts per
 minute per IP, then 429.
 
+**A private broker** (`BR_PASSWORD`) refuses every API call without its password, before any
+other check, rate-limited like other failed authentication and compared in constant time (as
+hashes). It limits *who can use* the broker; it adds nothing to the end-to-end encryption, and the
+partner learns it from the QR code like everything else needed to read.
+
 ## Abuse and denial of service
 
 - **Sizes**: mint body ≤ 1 KB, write body ≤ 512 KB, ≤ 64 keys, ≤ 4 KB per blob; unknown JSON

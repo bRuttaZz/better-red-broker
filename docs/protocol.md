@@ -34,6 +34,18 @@ Device id vector: 32 zero bytes → `Zmh6rfhivXdsj8GLjp-OIA` (`vectors_test.go`,
 | `X-Better-Red-Pair` | both, on `/v1/days*` | the pair id |
 | `X-Better-Red-Device` | her phone | her device key (base64url); its hash must equal the pair id's device part |
 | `X-Better-Red-Code` | partner | the one-time code |
+| `X-Better-Red-Password` | both, on every `/v1/*` call except `/v1/info` | only for a private broker (started with `BR_PASSWORD`); ignored by open brokers |
+
+### Optional password (private, self-hosted brokers)
+
+A broker started with `BR_PASSWORD` (or `-password-file`) refuses every API call (`POST /v1/pairs`
+and `/v1/days*`) without the right `X-Better-Red-Password`: **401** with
+`WWW-Authenticate: BetterRed-Password`, checked before anything else, counted as a failed
+authentication (rate-limited). `GET /v1/info` stays public and says `"password": true`; the website
+and `/healthz` stay public too. The password is 1–128 printable ASCII characters, no spaces.
+
+In the app it's typed like a connection string, `password@domain` (the last `@` splits them), and
+it travels in the QR code (the partner needs it too). The open default broker needs nothing.
 
 ## Endpoints
 
@@ -81,7 +93,7 @@ Headers: pair + code. `200 {"days": {"0": {"blob": "…", "updatedAt": …}, …
 
 ### Others
 
-`GET /v1/info` → `{"name", "version", "maxDays", "staleDays", "serverTime"}` · `GET /healthz` → `ok` ·
+`GET /v1/info` → `{"name", "version", "maxDays", "staleDays", "serverTime", "password"}` (`password`: whether this broker needs one) · `GET /healthz` → `ok` ·
 `GET /` → the landing page.
 
 ### Status codes on `/v1/days*`
@@ -89,6 +101,7 @@ Headers: pair + code. `200 {"days": {"0": {"blob": "…", "updatedAt": …}, …
 | status | meaning | the app shows |
 |---|---|---|
 | 403 | pair id missing, malformed, or not signed by this server's key | "pair again" |
+| 401 + `WWW-Authenticate: BetterRed-Password` | private broker: password missing or wrong (any `/v1` call but info) | "the server refused its password": pair again with the new one |
 | 401 | her: device key doesn't match the pair id · partner: wrong or expired code | her: "pair again" · partner: "check the date and time" (after one retry with the clock taken from the `Date` header) |
 | 404 | partner: nothing stored for this pair | "Waiting for her phone to send updates" |
 | 429 | rate limited | "try again later" |
@@ -127,5 +140,7 @@ keys and values are ignored, so newer apps can add things without breaking older
 
 ## QR code
 
-`BR1|<domain>|<pair id>|<share private key>|<pair secret>` (~180 characters, error correction M).
+`BR1|<server>|<pair id>|<share private key>|<pair secret>` (~180 characters, error correction M).
+`<server>` is the domain, or `<password, URL-encoded>@<domain>` for a private broker (so `|` and
+`@` in the password can't break the format; app versions before 1.2.0 refuse such codes).
 Whoever has it can read what she shares; show it only on her screen.

@@ -21,9 +21,12 @@ type testEnv struct {
 	store *Store
 }
 
-func newEnv(t *testing.T) *testEnv {
+func newEnv(t *testing.T) *testEnv { return newEnvWith(t, "") }
+
+// newEnvWith starts a test broker; a non-empty password locks the API (BR_PASSWORD).
+func newEnvWith(t *testing.T, password string) *testEnv {
 	t.Helper()
-	cfg := Config{MaxDays: 60, StaleDays: 10, MaxPairs: 3, Readers: 2, RateLimit: true}
+	cfg := Config{MaxDays: 60, StaleDays: 10, MaxPairs: 3, Readers: 2, RateLimit: true, Password: password}
 	store, err := OpenStore(filepath.Join(t.TempDir(), "b.db"), cfg.Readers)
 	if err != nil {
 		t.Fatal(err)

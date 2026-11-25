@@ -15,6 +15,10 @@ Rules decided with the owner:
   they travel in the `X-Better-Red-Pair` header (never URLs) and are checked before any DB work.
   Her phone proves the device id with its device key (hashed, never stored); the partner reads with
   a TOTP from the pair secret. Minting a new pair id deletes the device's old `device-id.*` rows.
+- Optional API password (`BR_PASSWORD` / `-password-file`, never a flag) for private self-hosted
+  brokers: every `/v1` call but `/v1/info` needs `X-Better-Red-Password`, else 401 with
+  `WWW-Authenticate: BetterRed-Password`. Open by default; open brokers ignore the header. The app
+  takes it as `password@domain` and puts it in the QR code.
 - Max 60 days per pair (`-max-days`), pairs unused for 10 days are deleted (`-stale-days`); the
   clean-up job runs hourly. Every read and write also enforces the window.
 - Validate everything, cap every size, rate-limit per IP; it's public and easy to abuse

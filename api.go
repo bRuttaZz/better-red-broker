@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
@@ -41,19 +42,24 @@ the device id inside the pair id. The partner's carry a one-time code (X-Better-
 Every handler validates its input completely before touching the database.
 */
 type API struct {
-	cfg     Config
-	store   *Store
-	signer  Signer
-	now     func() time.Time
-	ips     clientIPs
-	general *limiter // every request         (nil when -rate-limit=false: everything allowed)
-	mint    *limiter // pair ids minted
-	badAuth *limiter // failed authentication
+	cfg          Config
+	store        *Store
+	signer       Signer
+	now          func() time.Time
+	ips          clientIPs
+	passwordHash []byte   // SHA-256 of the API password, nil when the broker is open
+	general      *limiter // every request         (nil when -rate-limit=false: everything allowed)
+	mint         *limiter // pair ids minted
+	badAuth      *limiter // failed authentication
 }
 
 func NewAPI(cfg Config, store *Store, signer Signer) *API {
 	a := &API{cfg: cfg, store: store, signer: signer, now: time.Now,
 		ips: clientIPs{header: cfg.ClientIP, trusted: cfg.Proxies}}
+	if cfg.Password != "" {
+		h := sha256.Sum256([]byte(cfg.Password))
+		a.passwordHash = h[:]
+	}
 	if cfg.RateLimit {
 		a.general = newLimiter(2, 60)     // 2/s sustained, bursts of 60
 		a.mint = newLimiter(1.0/360, 5)   // 10 per hour, bursts of 5
@@ -63,12 +69,35 @@ func NewAPI(cfg Config, store *Store, signer Signer) *API {
 }
 
 func (a *API) Routes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /v1/info", a.info)
-	mux.HandleFunc("POST /v1/pairs", a.mintPair)
-	mux.HandleFunc("GET /v1/days", a.read)
-	mux.HandleFunc("GET /v1/days/index", a.index)
-	mux.HandleFunc("PUT /v1/days", a.push)
-	mux.HandleFunc("DELETE /v1/days", a.remove)
+	mux.HandleFunc("GET /v1/info", a.info) // public: says whether a password is needed
+	mux.HandleFunc("POST /v1/pairs", a.locked(a.mintPair))
+	mux.HandleFunc("GET /v1/days", a.locked(a.read))
+	mux.HandleFunc("GET /v1/days/index", a.locked(a.index))
+	mux.HandleFunc("PUT /v1/days", a.locked(a.push))
+	mux.HandleFunc("DELETE /v1/days", a.locked(a.remove))
+}
+
+// locked checks the optional API password (BR_PASSWORD) before anything else. Without one, every
+// request passes. Wrong or missing passwords count as failed authentication (rate-limited).
+func (a *API) locked(next http.HandlerFunc) http.HandlerFunc {
+	if a.passwordHash == nil {
+		return next
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		ip := a.ips.of(r)
+		if !a.badAuth.peek(ip, a.now()) {
+			a.fail(w, http.StatusTooManyRequests, "too many failed attempts, try later")
+			return
+		}
+		// Compare hashes, so the time taken says nothing about the password or its length.
+		got := sha256.Sum256([]byte(r.Header.Get(passwordHeader)))
+		if subtle.ConstantTimeCompare(got[:], a.passwordHash) != 1 {
+			w.Header().Set("WWW-Authenticate", passwordChallenge)
+			a.denied(w, ip, http.StatusUnauthorized, "this server needs a password")
+			return
+		}
+		next(w, r)
+	}
 }
 
 // ---------------------------------------------------------------- helpers
@@ -185,6 +214,7 @@ func (a *API) info(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"name": "better-red-broker", "version": version,
 		"maxDays": a.cfg.MaxDays, "staleDays": a.cfg.StaleDays, "serverTime": a.now().Unix(),
+		"password": a.passwordHash != nil,
 	})
 }
 

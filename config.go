@@ -34,6 +34,7 @@ type Config struct {
 	RateLimit    bool          // per-IP rate limits (false: leave all limiting to a reverse proxy)
 	ClientIP     string        // header with the client IP, set by a trusted proxy (X-Forwarded-For, CF-Connecting-IP, ...)
 	Proxies      []*net.IPNet  // peers whose ClientIP header is believed (-trusted-proxies)
+	Password     string        // optional: every API call must send it (self-hosted, private brokers). "" = open
 	DownloadURL  string        // "Download" button on the website
 	SourceURL    string        // source code link in the website footer
 	AuthorName   string
@@ -53,6 +54,7 @@ func loadConfig(args []string) (Config, error) {
 	fs.IntVar(&c.Readers, "readers", envInt("BR_READERS", 8), "read-only database connections")
 	fs.BoolVar(&c.RateLimit, "rate-limit", envBool("BR_RATE_LIMIT", true), "per-IP rate limits (turn off only if the reverse proxy limits instead)")
 	fs.StringVar(&c.ClientIP, "client-ip-header", env("BR_CLIENT_IP_HEADER", "X-Forwarded-For"), "header with the client IP, believed only from -trusted-proxies (X-Forwarded-For, CF-Connecting-IP, X-Real-IP)")
+	passwordFile := fs.String("password-file", env("BR_PASSWORD_FILE", ""), "file holding the API password (instead of BR_PASSWORD)")
 	proxies := fs.String("trusted-proxies", env("BR_TRUSTED_PROXIES", "loopback"), "comma-separated proxy addresses/CIDRs, 'loopback', 'private' or 'none'")
 	fs.StringVar(&c.DownloadURL, "download-url", env("BR_DOWNLOAD_URL", "https://github.com/bRuttaZz/better-red/releases"), "website download link")
 	fs.StringVar(&c.SourceURL, "source-url", env("BR_SOURCE_URL", "https://github.com/bRuttaZz/better-red"), "website source link")
@@ -68,6 +70,10 @@ func loadConfig(args []string) (Config, error) {
 	}
 	var err error
 	if c.Proxies, err = parseProxies(*proxies); err != nil {
+		return c, err
+	}
+	// The password never comes from a flag: command lines are visible to every user (ps).
+	if c.Password, err = loadPassword(os.Getenv("BR_PASSWORD"), *passwordFile); err != nil {
 		return c, err
 	}
 	switch {
@@ -97,6 +103,42 @@ func envInt(key string, def int) int {
 		return v
 	}
 	return def
+}
+
+// loadPassword reads the optional API password from BR_PASSWORD or a file (trailing newline
+// ignored). 1–128 printable ASCII characters without spaces: it travels in an HTTP header and is
+// typed into the app as "password@domain".
+func loadPassword(fromEnv, file string) (string, error) {
+	p := fromEnv
+	if file != "" {
+		if p != "" {
+			return "", fmt.Errorf("set BR_PASSWORD or -password-file, not both")
+		}
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			return "", fmt.Errorf("password file: %w", err)
+		}
+		p = strings.TrimRight(string(raw), "\r\n")
+	}
+	if p == "" {
+		return "", nil
+	}
+	if !validPassword(p) {
+		return "", fmt.Errorf("the password must be 1-128 printable ASCII characters, no spaces")
+	}
+	return p, nil
+}
+
+func validPassword(p string) bool {
+	if len(p) < 1 || len(p) > 128 {
+		return false
+	}
+	for i := 0; i < len(p); i++ {
+		if p[i] < 0x21 || p[i] > 0x7e {
+			return false
+		}
+	}
+	return true
 }
 
 func envBool(key string, def bool) bool {

@@ -29,10 +29,14 @@ const (
 	pairIDLen    = idTextLen + 1 + signTextLen // "<device-id>.<salted signature>"
 	pairHeader   = "X-Better-Red-Pair"         // every /v1/days request: the pair id
 	codeHeader   = "X-Better-Red-Code"         // the partner: one-time code from the pair secret
-	deviceHeader = "X-Better-Red-Device"       // her phone: the device key (proves the device id is hers)
-	codeDigits   = 8
-	codeStep     = 30 // seconds
-	codeWindow   = 2  // accept codes up to 2 steps (60 s) early or late (phone clocks drift)
+	deviceHeader = "X-Better-Red-Device"
+	// Optional API password (self-hosted brokers started with BR_PASSWORD). A refusal is a 401 with
+	// "WWW-Authenticate: BetterRed-Password", so the app can tell it apart from other 401s.
+	passwordHeader    = "X-Better-Red-Password"
+	passwordChallenge = "BetterRed-Password" // her phone: the device key (proves the device id is hers)
+	codeDigits        = 8
+	codeStep          = 30 // seconds
+	codeWindow        = 2  // accept codes up to 2 steps (60 s) early or late (phone clocks drift)
 )
 
 // deviceIDFromKey turns the phone's secret device key into its public device id.

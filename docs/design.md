@@ -29,6 +29,9 @@ smallest possible mailbox between them:
   new machine) costs nothing as long as the **server signing key** stays the same.
 - **It forgets.** At most 60 days per pair; pairs her phone hasn't written for 10 days are deleted.
 - **It's optional.** If it's down, both apps keep working; only the partner's view pauses.
+- **Anyone can run one.** The default broker is open; a self-hosted one can be kept private with
+  an optional password (`BR_PASSWORD`), which the app takes as `password@domain` and passes to the
+  partner inside the QR code.
   Anyone can run their own; the app just takes a domain.
 
 ## Roles
@@ -138,6 +141,8 @@ flowchart TD
 - **Server data lost**: nothing to do; her phone refills it. The partner may see "waiting" briefly.
 - **Signing key lost or changed**: every pair id becomes invalid (403); she makes a new code.
 - **Domain changes**: she unpairs and makes a new code on the new server; he scans it.
+- **Password changes** (private broker): both phones get 401s; she makes a new code with the new
+  password; he scans it.
 - **She unpairs**: her phone deletes the row (`DELETE /v1/days`) if it can reach the server, and
   forgets the pairing. The partner isn't told anything special: it just shows "waiting for her
   phone" until he disconnects (wipes his copy) or scans a new code.
