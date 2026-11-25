@@ -7,7 +7,24 @@
 [![Release](https://img.shields.io/github/release/bruttazz/better-red-broker.svg?style=flat-square)](https://github.com/bruttazz/better-red-broker/releases/latest)
 
 
+
+---
+
 > ⚠️ Vibe Coded
+
+<!-- ai-footprint:start -->
+**🌍 AI footprint so far** · built with Claude Code
+
+| ⚡ Energy | 💧 Water | 🧠 Tokens processed | 💬 Sessions | 🔁 Model calls |
+|:-:|:-:|:-:|:-:|:-:|
+| **~1.1 kWh** | **~3.9 L** | 37.9 M | 3 | 158 |
+
+For reference: that's about the electricity a 1.5-ton AC uses in ~44 minutes, and ~8 half-litre bottles of water.
+
+<sub>Model: Opus 5.5 (high). Estimated from Claude Code session logs (could be ~3× lower or higher); water includes on-site cooling (~0.48 L) and generating the electricity. Updated automatically, last on 2026-11-26. [How it's calculated](.claude/footprint/footprint.py).</sub>
+<!-- ai-footprint:end -->
+
+---
 
 The small relay behind [Better Red](https://github.com/bRuttaZz/better-red)'s partner sharing.
 
